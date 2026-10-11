@@ -1,0 +1,2 @@
+time,exp,split,n,trainable_params,dtype,batch_size,max_new_tokens,single_en,single_ko,mixed_en,mixed_ko,S_single,S_mixed,S,S_sentence_avg,output_dir
+2026-10-11T18:06:03+09:00,baseline,validation,500,0,float32,8,256,58.87,27.18,68.01,38.56,43.02,53.29,50.21,52.47,outputs/baseline

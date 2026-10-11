@@ -1,0 +1,50 @@
+# 공통 설정. 실험별 값은 experiments 아래에 둠
+model:
+  id: Qwen/Qwen3-1.7B
+  revision: 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e  # 확인한 snapshot으로 고정함
+  dtype: float32  # 평가 정밀도 (승인됨)
+seed: 42  # greedy baseline 결과에는 영향 없음
+
+data:
+  validation: data/validation.jsonl
+
+# 과제 PDF slide 8 기본 template. {target_language}에는 data 값(en/ko)을 그대로 넣음
+prompt_template: |-
+  Translate the following text into {target_language}.
+  The input may contain multiple languages. Preserve the meaning of the entire text. Output only the translation.
+  Text: {input_text}
+
+# greedy(do_sample=False, num_beams=1)와 enable_thinking=False는 코드에 고정함
+decoding:
+  max_new_tokens: 256  # 승인됨
+  batch_size: 8        # 승인됨. batch 구성에 따라 출력이 미세하게 달라질 수 있어 모든 시스템에 동일하게 씀
+
+results_csv: results/results.csv
+
+# 학습 데이터 생성 (TED2020 en 기준 join + 합성 code-switched). 상세는 src/data.py
+train_data:
+  raw_dir: data/raw/parallel-sentences-talks  # sentence-transformers/parallel-sentences-talks @0c70bc67 (en-ko/en-es/en-ja)
+  train_out: data/train.jsonl
+  dev_out: data/dev.jsonl
+  exclude_eval: [data/validation.jsonl, data/test.jsonl]  # 겹치는 문장 제거용
+  seed: 42
+  max_en_chars: 120             # val/test 입력 최대 128자 수준에 맞춤
+  # 구성은 val(single 300 : mixed 200, 방향·target별 균등)을 그대로 120배(train)·2배(dev)함
+  single_per_direction: 6000    # 6방향 (ko/es/ja->en, en/es/ja->ko)
+  mixed_per_target: 12000       # en, ko target 각각
+  dev_single_per_direction: 100
+  dev_mixed_per_target: 200
+  # mixed 입력의 문자 체계 조합 비율. val mixed 입력(정답은 쓰지 않음)에서 측정함
+  mix_profile:
+    en: {ja+lat: 0.28, ko+lat: 0.27, ko+ja+lat: 0.25, lat: 0.10, ko+ja: 0.10}
+    ko: {ko+lat: 0.28, ja+lat: 0.27, ko+ja+lat: 0.25, lat: 0.10, ko+ja: 0.10}
+  # 절 단위 전환이 있는 mixed 입력 비율. val mixed 입력 200개를 Claude가 직접 읽고 판정함 (en 62/100, ko 22/100)
+  clause_share: {en: 0.62, ko: 0.22}
+  tries_per_row: 30             # row 하나에 시도할 (조합, 단위) 횟수. row당 target별 최대 1개씩 만듦
+  align_model: FacebookAI/xlm-roberta-base  # code-switched 합성용 word alignment에만 씀
+  align_revision: e73636d4f797dec63c3081bb6ed5c7b0bb3f2089
+  align_layer: 8
+
+experiments:
+  baseline:
+    output_dir: outputs/baseline
